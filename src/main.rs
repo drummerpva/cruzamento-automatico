@@ -17,7 +17,7 @@ const ACELERACAO_MAXIMA: f64 = 3.0;
 const ACELERACAO_MINIMA: f64 = -10.0;
 
 fn simula_carros(via_carro1: char, acel_carro1: f64, via_carro2: char, acel_carro2: f64) -> bool {
-    let chassi1 = 1111;
+    let mut placa1 = String::from("ABC1234");
     let via1 = via_carro1;
     let _acel_max1 = ACELERACAO_MAXIMA;
     let _acel_min1 = ACELERACAO_MINIMA;
@@ -27,7 +27,7 @@ fn simula_carros(via_carro1: char, acel_carro1: f64, via_carro2: char, acel_carr
     let mut vel_atual1 = 0.0;
     let acel_atual1: f64;
 
-    let chassi2 = 2222;
+    let mut placa2 = String::from("xyz9876");
     let via2 = via_carro2;
     let _acel_max2 = ACELERACAO_MAXIMA;
     let _acel_min2 = ACELERACAO_MINIMA;
@@ -36,6 +36,15 @@ fn simula_carros(via_carro1: char, acel_carro1: f64, via_carro2: char, acel_carr
     let mut pos_atual2 = -100.0;
     let mut vel_atual2 = 0.0;
     let acel_atual2: f64;
+
+    placa1 = placa1.to_uppercase();
+    placa2 = placa2.to_uppercase();
+    if !valida_placa(&placa1) {
+        panic!("    Placa inválida: {placa1}");
+    }
+    if !valida_placa(&placa2) {
+        panic!("    Placa inválida: {placa2}");
+    }
 
     acel_atual1 = acel_carro1;
     acel_atual2 = acel_carro2;
@@ -65,7 +74,7 @@ fn simula_carros(via_carro1: char, acel_carro1: f64, via_carro2: char, acel_carr
             vel_atual1 = vel_max1;
         }
 
-        println!("Carro1 {chassi1} na posição {via1}{pos_atual1}, velocidade {vel_atual1}, aceleração {acel_atual1}");
+        println!("Carro1 {placa1} na posição {via1}{pos_atual1}, velocidade {vel_atual1}, aceleração {acel_atual1}");
 
         // Atualiza carro 2
         let old_position = pos_atual2;
@@ -85,7 +94,7 @@ fn simula_carros(via_carro1: char, acel_carro1: f64, via_carro2: char, acel_carr
             vel_atual2 = vel_max2;
         }
 
-        println!("Carro2 {chassi2} na posição {via2}{pos_atual2}, velocidade {vel_atual2}, aceleração {acel_atual2}");
+        println!("Carro2 {placa2} na posição {via2}{pos_atual2}, velocidade {vel_atual2}, aceleração {acel_atual2}");
 
         // Detecta colisão na via H
         if via1 == 'H' && via2 == 'H' {
@@ -138,6 +147,26 @@ fn simula_carros(via_carro1: char, acel_carro1: f64, via_carro2: char, acel_carr
         }
     }
     return false;
+}
+
+fn valida_placa(placa: &str) -> bool {
+    if !placa.is_ascii() {
+        println!("Placa não é ASCII");
+        return false;
+    }
+    if placa.len() != 7 {
+        println!("Placa não tem 7 caracteres");
+        return false;
+    }
+    if !placa[0..3].chars().all(char::is_alphabetic) {
+        println!("Placa não tem 3 letras iniciais");
+        return false;
+    }
+    if !placa[3..].chars().all(char::is_numeric) {
+        println!("Placa não tem 4 dígitos finais");
+        return false;
+    }
+    return true;
 }
 
 fn colisao_longitudinal(posicao_frente: f64, comprimento: f64, posicao_tras: f64) -> bool {
