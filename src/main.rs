@@ -19,9 +19,15 @@ const VELOCIDADE_MAXIMA: f64 = 200.0 * (1000.0 / 3600.0);
 const ACELERACAO_MAXIMA: f64 = 3.0;
 const ACELERACAO_MINIMA: f64 = -10.0;
 
+#[derive(Debug, Clone)]
+enum Via {
+    ViaH,
+    VIaV,
+}
+
 struct Carro {
     placa: String,
-    via: char,
+    via: Via,
     acel_max: f64,
     acel_min: f64,
     vel_max: f64,
@@ -32,7 +38,7 @@ struct Carro {
 }
 
 impl Carro {
-    fn new(placa: String, via: char, acel: f64) -> Self {
+    fn new(placa: String, via: Via, acel: f64) -> Self {
         let (placa_valida, message) = Carro::valida_placa(&placa);
         assert!(placa_valida, " Placa inválida: {message} @{placa}");
         assert!(
@@ -41,15 +47,14 @@ impl Carro {
         );
         Self {
             placa,
-            via,
+            via: via.clone(),
             acel_max: ACELERACAO_MAXIMA,
             acel_min: ACELERACAO_MINIMA,
             vel_max: VELOCIDADE_MAXIMA,
             comprimento: CARRO_COMPRIMENTO,
-            pos_atual: if via == 'H' {
-                -VIAH_PERIMETRO
-            } else {
-                -VIAV_PERIMETRO
+            pos_atual: match via {
+                Via::ViaH => -VIAH_PERIMETRO,
+                Via::VIaV => -VIAV_PERIMETRO,
             },
             vel_atual: VELOCIDADE_CRUZEIRO,
             acel_atual: acel,
@@ -72,7 +77,7 @@ impl Carro {
     }
     fn mostra(&self) {
         println!(
-            "@{}, na posicão {}{}, velocidade {}, aceleração {}",
+            "@{}, na posicão {:?}{}, velocidade {}, aceleração {}",
             self.placa, self.via, self.pos_atual, self.vel_atual, self.acel_atual
         );
     }
@@ -110,28 +115,28 @@ impl Transito {
             num_carros_criados_h: 0,
             num_carros_sairam_h: 0,
             carros_via_h: [
-                Carro::new(String::from("AAA0000"), 'H', 0.0),
-                Carro::new(String::from("AAA0000"), 'H', 0.0),
-                Carro::new(String::from("AAA0000"), 'H', 0.0),
-                Carro::new(String::from("AAA0000"), 'H', 0.0),
+                Carro::new(String::from("AAA0000"), Via::ViaH, 0.0),
+                Carro::new(String::from("AAA0000"), Via::ViaH, 0.0),
+                Carro::new(String::from("AAA0000"), Via::ViaH, 0.0),
+                Carro::new(String::from("AAA0000"), Via::ViaH, 0.0),
             ],
             num_carros_criados_v: 0,
             num_carros_sairam_v: 0,
             carros_via_v: [
-                Carro::new(String::from("AAA0000"), 'V', 0.0),
-                Carro::new(String::from("AAA0000"), 'V', 0.0),
-                Carro::new(String::from("AAA0000"), 'V', 0.0),
-                Carro::new(String::from("AAA0000"), 'V', 0.0),
+                Carro::new(String::from("AAA0000"), Via::VIaV, 0.0),
+                Carro::new(String::from("AAA0000"), Via::VIaV, 0.0),
+                Carro::new(String::from("AAA0000"), Via::VIaV, 0.0),
+                Carro::new(String::from("AAA0000"), Via::VIaV, 0.0),
             ],
         }
     }
-    fn ocorreu_colisao(&self) -> (bool, &str) {
+    fn ocorreu_colisao(&self) -> Option<&str> {
         let mut i = self.num_carros_sairam_h + 1;
         while i < self.num_carros_sairam_h {
             if self.carros_via_h[i - 1].pos_atual - self.carros_via_h[i - 1].comprimento
                 <= self.carros_via_h[i].pos_atual
             {
-                return (true, "Colisão via H, carros {}");
+                return Some("Colisão via H, carros {}");
             }
             i += 1;
         }
@@ -140,7 +145,7 @@ impl Transito {
             if self.carros_via_v[i - 1].pos_atual - self.carros_via_v[i - 1].comprimento
                 <= self.carros_via_v[i].pos_atual
             {
-                return (true, "Colisão via V, carros {}");
+                return Some("Colisão via V, carros {}");
             }
             i += 1;
         }
@@ -164,35 +169,32 @@ impl Transito {
             i += 1;
         }
         if cruzando_h && cruzando_v {
-            return (true, "Colisão dentreo do cruzamento");
+            return Some("Colisão dentreo do cruzamento");
         }
 
-        (false, "")
+        None
     }
 
-    fn chega_carro(&mut self, via: char, acel: f64) -> bool {
-        assert!(
-            via == 'H' || via == 'V',
-            "   chega_carro recebeu via {}",
-            via
-        );
-        let jah_tem = if via == 'H' {
-            self.num_carros_criados_h
-        } else {
-            self.num_carros_criados_v
+    fn chega_carro(&mut self, via: Via, acel: f64) -> bool {
+        let jah_tem = match via {
+            Via::ViaH => self.num_carros_criados_h,
+            Via::VIaV => self.num_carros_criados_v,
         };
         if jah_tem == VIA_MAXIMO_CARROS {
             return false;
         }
         let mut nova_placa = String::from("CCC");
         nova_placa.push_str(&format!("{:04}", jah_tem + 1));
-        let novo_carro = Carro::new(nova_placa, via, acel);
-        if via == 'H' {
-            self.carros_via_h[self.num_carros_criados_h] = novo_carro;
-            self.num_carros_criados_h += 1;
-        } else {
-            self.carros_via_v[self.num_carros_criados_v] = novo_carro;
-            self.num_carros_criados_v += 1;
+        let novo_carro = Carro::new(nova_placa, via.clone(), acel);
+        match via {
+            Via::ViaH => {
+                self.carros_via_h[self.num_carros_criados_h] = novo_carro;
+                self.num_carros_criados_h += 1;
+            }
+            Via::VIaV => {
+                self.carros_via_v[self.num_carros_criados_v] = novo_carro;
+                self.num_carros_criados_v += 1;
+            }
         }
         true
     }
@@ -246,10 +248,10 @@ impl Transito {
 }
 
 fn simula_carros() {
-    const TEMPO_ENTRE_CHEGADAS: f64 = 3000.0;
+    const TEMPO_ENTRE_CHEGADAS: f64 = 300.0;
     let mut transito = Transito::new();
-    transito.chega_carro('H', ACELERACAO_MAXIMA);
-    transito.chega_carro('V', ACELERACAO_MAXIMA);
+    transito.chega_carro(Via::ViaH, ACELERACAO_MAXIMA);
+    transito.chega_carro(Via::VIaV, ACELERACAO_MAXIMA);
     let mut tempo_ate_proxima_chegada = TEMPO_ENTRE_CHEGADAS;
     println!("simula carros");
     let mut tickms: f64;
@@ -258,9 +260,11 @@ fn simula_carros() {
         sleep(Duration::from_millis(tickms.round() as u64));
         transito.tick(tickms);
         transito.mostra_vias();
-        let (colisao, mensagem) = transito.ocorreu_colisao();
-        if colisao {
-            panic!("Ocorreu colisão: {}", mensagem);
+        match transito.ocorreu_colisao() {
+            Some(mensagem) => {
+                panic!("Ocorreu colisão: {}", mensagem);
+            }
+            None => {}
         }
 
         if transito.num_carros_criados_h == transito.num_carros_sairam_h
@@ -272,13 +276,13 @@ fn simula_carros() {
         tempo_ate_proxima_chegada -= tickms;
 
         if tempo_ate_proxima_chegada <= 0.0 {
-            let acel = 0.0;
+            let _acel = 0.0;
             assert!(
-                transito.chega_carro('H', ACELERACAO_MAXIMA),
+                transito.chega_carro(Via::ViaH, ACELERACAO_MAXIMA),
                 "Falha ao chegar um carro na via H"
             );
             assert!(
-                transito.chega_carro('V', ACELERACAO_MAXIMA),
+                transito.chega_carro(Via::VIaV, ACELERACAO_MAXIMA),
                 "Falha ao chegar um carro na via V"
             );
             tempo_ate_proxima_chegada += TEMPO_ENTRE_CHEGADAS;
