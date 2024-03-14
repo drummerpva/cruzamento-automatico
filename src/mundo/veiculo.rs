@@ -1,9 +1,14 @@
+use crate::mundo::{VIAH_PERIMETRO, VIAV_PERIMETRO};
+
 use super::Via;
 
-use crate::{
-    ACELERACAO_MAXIMA, ACELERACAO_MINIMA, CARRO_COMPRIMENTO, VELOCIDADE_CRUZEIRO,
-    VELOCIDADE_MAXIMA, VIAH_PERIMETRO, VIAV_PERIMETRO,
-};
+pub const _CARRO_LARGURA: f64 = 2.0;
+pub const CARRO_COMPRIMENTO: f64 = 4.0;
+pub const VELOCIDADE_CRUZEIRO: f64 = 80.0 * (1000.0 / 3600.0);
+pub const VELOCIDADE_MAXIMA: f64 = 200.0 * (1000.0 / 3600.0);
+pub const ACELERACAO_MAXIMA: f64 = 3.0;
+pub const ACELERACAO_MINIMA: f64 = -10.0;
+
 pub struct Carro {
     pub placa: String,
     via: Via,
@@ -12,7 +17,7 @@ pub struct Carro {
     vel_max: f64,
     pub comprimento: f64,
     pub pos_atual: f64,
-    vel_atual: f64,
+    pub vel_atual: f64,
     acel_atual: f64,
 }
 

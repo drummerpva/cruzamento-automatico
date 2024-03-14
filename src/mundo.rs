@@ -1,157 +1,167 @@
 pub mod veiculo;
-
+use self::veiculo::VELOCIDADE_CRUZEIRO;
 use veiculo::Carro;
 
-use crate::{VIAH_LARGURA, VIAH_MARGEM, VIAV_LARGURA, VIAV_MARGEM, VIA_MAXIMO_CARROS};
+const VIAH_MARGEM: f64 = 15.0;
+const VIAV_MARGEM: f64 = 15.0;
+
+const VIAH_LARGURA: f64 = 4.0;
+const VIAV_LARGURA: f64 = 4.0;
+
+const VIAH_PERIMETRO: f64 = 150.0;
+const VIAV_PERIMETRO: f64 = 150.0;
+
+const VIA_MAXIMO_CARROS: usize = 4;
+
+#[derive(Debug, Clone)]
+pub enum Via {
+    ViaH,
+    VIaV,
+}
+
 pub struct Transito {
-    pub num_carros_criados_h: usize,
-    pub num_carros_sairam_h: usize,
-    pub carros_via_h: [Carro; 4],
-    pub num_carros_criados_v: usize,
-    pub num_carros_sairam_v: usize,
-    pub carros_via_v: [Carro; 4],
+    carros_via_h: Vec<Carro>,
+    carros_via_v: Vec<Carro>,
+    carros_criados: i32,
 }
 
 impl Transito {
     pub fn new() -> Self {
         Self {
-            num_carros_criados_h: 0,
-            num_carros_sairam_h: 0,
-            carros_via_h: [
-                Carro::new(String::from("AAA0000"), Via::ViaH, 0.0),
-                Carro::new(String::from("AAA0000"), Via::ViaH, 0.0),
-                Carro::new(String::from("AAA0000"), Via::ViaH, 0.0),
-                Carro::new(String::from("AAA0000"), Via::ViaH, 0.0),
-            ],
-            num_carros_criados_v: 0,
-            num_carros_sairam_v: 0,
-            carros_via_v: [
-                Carro::new(String::from("AAA0000"), Via::VIaV, 0.0),
-                Carro::new(String::from("AAA0000"), Via::VIaV, 0.0),
-                Carro::new(String::from("AAA0000"), Via::VIaV, 0.0),
-                Carro::new(String::from("AAA0000"), Via::VIaV, 0.0),
-            ],
+            carros_via_h: Vec::new(),
+            carros_via_v: Vec::new(),
+            carros_criados: 0,
         }
     }
     pub fn ocorreu_colisao(&self) -> Option<&str> {
-        let mut i = self.num_carros_sairam_h + 1;
-        while i < self.num_carros_sairam_h {
-            if self.carros_via_h[i - 1].pos_atual - self.carros_via_h[i - 1].comprimento
-                <= self.carros_via_h[i].pos_atual
-            {
-                return Some("Colisão via H, carros {}");
+        if self.carros_via_h.len() >= 2 {
+            for i in 0..self.carros_via_h.len() - 1 {
+                let traseira_do_i = self.carros_via_h.get(i).unwrap().pos_atual
+                    - self.carros_via_h.get(i).unwrap().comprimento;
+                if traseira_do_i <= self.carros_via_h.get(i + 1).unwrap().pos_atual {
+                    return Some("Colisão via H");
+                }
             }
-            i += 1;
         }
-        i = self.num_carros_sairam_v + 1;
-        while i < self.num_carros_sairam_v {
-            if self.carros_via_v[i - 1].pos_atual - self.carros_via_v[i - 1].comprimento
-                <= self.carros_via_v[i].pos_atual
-            {
-                return Some("Colisão via V, carros {}");
+        if self.carros_via_v.len() >= 2 {
+            for i in 0..self.carros_via_v.len() - 1 {
+                let traseira_do_i = self.carros_via_v.get(i).unwrap().pos_atual
+                    - self.carros_via_v.get(i).unwrap().comprimento;
+                if traseira_do_i <= self.carros_via_v.get(i + 1).unwrap().pos_atual {
+                    return Some("Colisão via V");
+                }
             }
-            i += 1;
         }
-
         let mut cruzando_h = false;
         let mut cruzando_v = false;
-        i = self.num_carros_sairam_h;
-        while i < self.num_carros_sairam_h {
+        for carro in &self.carros_via_h {
             cruzando_h = cruzando_h
-                || (self.carros_via_h[i].pos_atual > 0.0
-                    && self.carros_via_h[i].pos_atual
-                        < 0.0 + VIAV_LARGURA + self.carros_via_h[i].comprimento);
-            i += 1;
+                || (carro.pos_atual > 0.0
+                    && carro.pos_atual < 0.0 + VIAV_LARGURA + carro.comprimento);
         }
-        i = self.num_carros_sairam_v;
-        while i < self.num_carros_sairam_v {
+        for carro in &self.carros_via_v {
             cruzando_v = cruzando_v
-                || (self.carros_via_v[i].pos_atual > 0.0
-                    && self.carros_via_v[i].pos_atual
-                        < 0.0 + VIAH_LARGURA + self.carros_via_v[i].comprimento);
-            i += 1;
+                || (carro.pos_atual > 0.0
+                    && carro.pos_atual < 0.0 + VIAH_LARGURA + carro.comprimento);
         }
         if cruzando_h && cruzando_v {
-            return Some("Colisão dentreo do cruzamento");
+            return Some("Colisão dentro do cruzamento");
         }
-
         None
     }
 
-    pub fn chega_carro(&mut self, via: Via, acel: f64) -> bool {
-        let jah_tem = match via {
-            Via::ViaH => self.num_carros_criados_h,
-            Via::VIaV => self.num_carros_criados_v,
-        };
-        if jah_tem == VIA_MAXIMO_CARROS {
+    fn define_velocidade_chegada(&self, via: &Via) -> f64 {
+        match via {
+            Via::ViaH => {
+                if self.carros_via_h.len() == 0 {
+                    return VELOCIDADE_CRUZEIRO;
+                }
+                let ultimo_carro = self.carros_via_h.last().unwrap();
+                let distancia = VIAH_PERIMETRO + ultimo_carro.pos_atual - ultimo_carro.comprimento;
+                if distancia < 0.5 {
+                    return 0.0;
+                }
+                if distancia < 4.0 {
+                    return VELOCIDADE_CRUZEIRO.min(ultimo_carro.vel_atual);
+                }
+                return VELOCIDADE_CRUZEIRO;
+            }
+            Via::VIaV => {
+                if self.carros_via_v.len() == 0 {
+                    return VELOCIDADE_CRUZEIRO;
+                }
+                let ultimo_carro = self.carros_via_v.last().unwrap();
+                let distancia = VIAV_PERIMETRO + ultimo_carro.pos_atual - ultimo_carro.comprimento;
+                if distancia < 0.5 {
+                    return 0.0;
+                }
+                if distancia < 4.0 {
+                    return VELOCIDADE_CRUZEIRO.min(ultimo_carro.vel_atual);
+                }
+                return VELOCIDADE_CRUZEIRO;
+            }
+        }
+    }
+
+    pub fn chega_carro(&mut self, via: Via) -> bool {
+        let velocidade = self.define_velocidade_chegada(&via);
+        if velocidade == 0.0 {
             return false;
         }
         let mut nova_placa = String::from("CCC");
-        nova_placa.push_str(&format!("{:04}", jah_tem + 1));
-        let novo_carro = Carro::new(nova_placa, via.clone(), acel);
+        nova_placa.push_str(&format!("{:04}", self.carros_criados));
+        self.carros_criados += 1;
+        let novo_carro = Carro::new(nova_placa, via.clone(), 0.0);
         match via {
             Via::ViaH => {
-                self.carros_via_h[self.num_carros_criados_h] = novo_carro;
-                self.num_carros_criados_h += 1;
+                self.carros_via_h.push(novo_carro);
             }
             Via::VIaV => {
-                self.carros_via_v[self.num_carros_criados_v] = novo_carro;
-                self.num_carros_criados_v += 1;
+                self.carros_via_v.push(novo_carro);
             }
         }
         true
     }
+    pub fn vazio(&self) -> bool {
+        self.carros_via_h.len() == 0 && self.carros_via_v.len() == 0
+    }
 
     pub fn tick(&mut self, tickms: f64) {
         println!("transito.tick");
-        let mut i;
-        i = self.num_carros_sairam_h;
-        while i < self.num_carros_sairam_h {
-            self.carros_via_h[i].tick(tickms);
-            i += 1;
+        for carro in &mut self.carros_via_h {
+            carro.tick(tickms);
         }
-        i = self.num_carros_sairam_v;
-        while i < self.num_carros_sairam_v {
-            self.carros_via_v[i].tick(tickms);
-            i += 1;
+        for carro in &mut self.carros_via_v {
+            carro.tick(tickms);
         }
 
         // Carro mais antigo na via H saiu do sistema?
-        if self.num_carros_sairam_h < self.num_carros_criados_h {
-            let mais_antigo_h = &self.carros_via_h[self.num_carros_sairam_h];
-            if mais_antigo_h.pos_atual > mais_antigo_h.comprimento + VIAV_LARGURA + VIAH_MARGEM {
+        if self.carros_via_h.len() > 0 {
+            let mais_antigo_h = self.carros_via_h.get(0).unwrap();
+            if mais_antigo_h.pos_atual > mais_antigo_h.comprimento + VIAV_LARGURA {
                 println!("@{} saiu da via H", mais_antigo_h.placa);
-                self.num_carros_sairam_h += 1;
+                self.carros_via_h.remove(0);
             }
         }
 
-        if self.num_carros_sairam_v < self.num_carros_criados_v {
-            let mais_antigo_v = &self.carros_via_v[self.num_carros_sairam_v];
-            if mais_antigo_v.pos_atual > mais_antigo_v.comprimento + VIAH_LARGURA + VIAV_MARGEM {
+        // Carro mais antigo na via V saiu do sistema?
+        if self.carros_via_v.len() > 0 {
+            let mais_antigo_v = self.carros_via_v.get(0).unwrap();
+            if mais_antigo_v.pos_atual > mais_antigo_v.comprimento + VIAH_LARGURA {
                 println!("@{} saiu da via V", mais_antigo_v.placa);
-                self.num_carros_sairam_v += 1;
+                self.carros_via_v.remove(0);
             }
         }
     }
 
     pub fn mostra_vias(&self) {
         println!("___Carros na via H___");
-        let mut i = self.num_carros_sairam_h;
-        while i < self.num_carros_criados_h {
-            self.carros_via_h[i].mostra();
-            i += 1;
+        for carro in &self.carros_via_h {
+            carro.mostra();
         }
         println!("___Carros na via V___");
-        i = self.num_carros_sairam_v;
-        while i < self.num_carros_criados_v {
-            self.carros_via_v[i].mostra();
-            i += 1;
+        for carro in &self.carros_via_v {
+            carro.mostra();
         }
     }
-}
-
-#[derive(Debug, Clone)]
-pub enum Via {
-    ViaH,
-    VIaV,
 }
