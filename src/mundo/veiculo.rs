@@ -1,6 +1,7 @@
-use crate::mundo::{VIAH_PERIMETRO, VIAV_PERIMETRO};
-
 use super::Via;
+use crate::comunicacao::{Comunicacao, MensagemDeVeiculo, MensagemDoControlador};
+
+use crate::mundo::{VIAH_PERIMETRO, VIAV_PERIMETRO};
 
 pub const _CARRO_LARGURA: f64 = 2.0;
 pub const CARRO_COMPRIMENTO: f64 = 4.0;
@@ -11,14 +12,14 @@ pub const ACELERACAO_MINIMA: f64 = -10.0;
 
 pub struct Carro {
     pub placa: String,
-    via: Via,
-    acel_max: f64,
-    acel_min: f64,
-    vel_max: f64,
+    pub via: Via,
+    pub acel_max: f64,
+    pub acel_min: f64,
+    pub vel_max: f64,
     pub comprimento: f64,
     pub pos_atual: f64,
     pub vel_atual: f64,
-    acel_atual: f64,
+    pub acel_atual: f64,
 }
 
 impl Carro {
@@ -65,7 +66,7 @@ impl Carro {
             self.placa, self.via, self.pos_atual, self.vel_atual, self.acel_atual
         );
     }
-    pub fn tick(&mut self, tickms: f64) {
+    pub fn tick(&mut self, tickms: f64, comunicacao: &mut Comunicacao) {
         let pos_anterior = self.pos_atual;
         self.pos_atual = self.pos_atual
             + self.vel_atual * (tickms / 1000.0)
@@ -80,6 +81,26 @@ impl Carro {
         }
         if self.vel_atual > self.vel_max {
             self.vel_atual = self.vel_max;
+        }
+        loop {
+            match comunicacao.receive_por_veiculo(&self.placa) {
+                None => break,
+                Some(message) => match message {
+                    MensagemDoControlador::SetAcel { placa, acel } => {
+                        self.acel_atual = acel;
+                    }
+                    MensagemDoControlador::PedeSituaca { placa } => {
+                        println!("#veiculo @{} informa sua situacao", &self.placa);
+                        let message = MensagemDeVeiculo::SituacaoAtual {
+                            placa: placa,
+                            pos_atual: self.pos_atual,
+                            vel_atual: self.vel_atual,
+                            acel_atual: self.acel_atual,
+                        };
+                        comunicacao.send_por_veiculo(message);
+                    }
+                },
+            }
         }
     }
 }

@@ -1,5 +1,8 @@
-pub mod veiculo;
+mod veiculo;
 use self::veiculo::VELOCIDADE_CRUZEIRO;
+use crate::comunicacao::Comunicacao;
+use crate::comunicacao::MensagemDeControlador;
+use crate::comunicacao::MensagemDeVeiculo;
 use veiculo::Carro;
 
 const VIAH_MARGEM: f64 = 15.0;
@@ -103,7 +106,7 @@ impl Transito {
         }
     }
 
-    pub fn chega_carro(&mut self, via: Via) -> bool {
+    pub fn chega_carro(&mut self, via: Via, comunicacao: &mut Comunicacao) -> bool {
         let velocidade = self.define_velocidade_chegada(&via);
         if velocidade == 0.0 {
             return false;
@@ -112,6 +115,14 @@ impl Transito {
         nova_placa.push_str(&format!("{:04}", self.carros_criados));
         self.carros_criados += 1;
         let novo_carro = Carro::new(nova_placa, via.clone(), 0.0);
+        comunicacao.send_por_veiculo(MensagemDeVeiculo::Chegada {
+            placa: nova_placa,
+            via: via.clone(),
+            acel_max: novo_carro.acel_max,
+            acel_min: novo_carro.acel_min,
+            vel_max: novo_carro.vel_max,
+            comprimento: novo_carro.comprimento,
+        });
         match via {
             Via::ViaH => {
                 self.carros_via_h.push(novo_carro);
