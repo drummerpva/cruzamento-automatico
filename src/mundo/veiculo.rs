@@ -39,7 +39,7 @@ impl Carro {
             comprimento: CARRO_COMPRIMENTO,
             pos_atual: match via {
                 Via::ViaH => -VIAH_PERIMETRO,
-                Via::VIaV => -VIAV_PERIMETRO,
+                Via::ViaV => -VIAV_PERIMETRO,
             },
             vel_atual: VELOCIDADE_CRUZEIRO,
             acel_atual: acel,
@@ -87,12 +87,14 @@ impl Carro {
                 None => break,
                 Some(message) => match message {
                     MensagemDoControlador::SetAcel { placa, acel } => {
+                        assert!(&placa == &self.placa);
+                        println!("#veiculo @{} recebe acel {}", placa, acel);
                         self.acel_atual = acel;
                     }
-                    MensagemDoControlador::PedeSituaca { placa } => {
+                    MensagemDoControlador::PedeSituacao { placa } => {
                         println!("#veiculo @{} informa sua situacao", &self.placa);
                         let message = MensagemDeVeiculo::SituacaoAtual {
-                            placa: placa,
+                            placa,
                             pos_atual: self.pos_atual,
                             vel_atual: self.vel_atual,
                             acel_atual: self.acel_atual,

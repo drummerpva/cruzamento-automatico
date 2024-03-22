@@ -1,4 +1,6 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, VecDeque};
+
+use crate::mundo::Via;
 
 pub enum MensagemDeVeiculo {
     Chegada {
@@ -22,7 +24,7 @@ pub enum MensagemDoControlador {
 }
 pub struct Comunicacao {
     mensagens_de_veiculo: Vec<MensagemDeVeiculo>,
-    mensagens_do_controlador: HashMap<String, MensagemDoControlador>,
+    mensagens_do_controlador: HashMap<String, VecDeque<MensagemDoControlador>>,
 }
 impl Comunicacao {
     pub fn new() -> Self {
@@ -35,10 +37,17 @@ impl Comunicacao {
         self.mensagens_de_veiculo.push(message);
     }
     pub fn receive_por_veiculo(&mut self, placa: &String) -> Option<MensagemDoControlador> {
-        self.mensagens_do_controlador.remove(placa)
+        match self.mensagens_do_controlador.get_mut(placa) {
+            None => None,
+            Some(messages) => messages.pop_front(),
+        }
     }
     pub fn send_por_controlador(&mut self, placa: String, message: MensagemDoControlador) {
-        self.mensagens_do_controlador.insert(placa, message);
+        let lista = self
+            .mensagens_do_controlador
+            .entry(placa)
+            .or_insert(VecDeque::new());
+        lista.push_back(message);
     }
     pub fn receive_por_controlador(&mut self) -> Option<MensagemDeVeiculo> {
         if self.mensagens_de_veiculo.len() == 0 {

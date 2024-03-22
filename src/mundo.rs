@@ -1,7 +1,6 @@
 mod veiculo;
 use self::veiculo::VELOCIDADE_CRUZEIRO;
 use crate::comunicacao::Comunicacao;
-use crate::comunicacao::MensagemDeControlador;
 use crate::comunicacao::MensagemDeVeiculo;
 use veiculo::Carro;
 
@@ -16,10 +15,10 @@ const VIAV_PERIMETRO: f64 = 150.0;
 
 const VIA_MAXIMO_CARROS: usize = 4;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum Via {
     ViaH,
-    VIaV,
+    ViaV,
 }
 
 pub struct Transito {
@@ -89,7 +88,7 @@ impl Transito {
                 }
                 return VELOCIDADE_CRUZEIRO;
             }
-            Via::VIaV => {
+            Via::ViaV => {
                 if self.carros_via_v.len() == 0 {
                     return VELOCIDADE_CRUZEIRO;
                 }
@@ -106,15 +105,15 @@ impl Transito {
         }
     }
 
-    pub fn chega_carro(&mut self, via: Via, comunicacao: &mut Comunicacao) -> bool {
+    pub fn chega_carro(&mut self, via: Via, comunicacao: &mut Comunicacao) -> Result<(), String> {
         let velocidade = self.define_velocidade_chegada(&via);
         if velocidade == 0.0 {
-            return false;
+            return Err("Via congetionada".to_string());
         }
         let mut nova_placa = String::from("CCC");
         nova_placa.push_str(&format!("{:04}", self.carros_criados));
         self.carros_criados += 1;
-        let novo_carro = Carro::new(nova_placa, via.clone(), 0.0);
+        let novo_carro = Carro::new(nova_placa.clone(), via.clone(), 0.0);
         comunicacao.send_por_veiculo(MensagemDeVeiculo::Chegada {
             placa: nova_placa,
             via: via.clone(),
@@ -127,23 +126,23 @@ impl Transito {
             Via::ViaH => {
                 self.carros_via_h.push(novo_carro);
             }
-            Via::VIaV => {
+            Via::ViaV => {
                 self.carros_via_v.push(novo_carro);
             }
         }
-        true
+        Ok(())
     }
     pub fn vazio(&self) -> bool {
         self.carros_via_h.len() == 0 && self.carros_via_v.len() == 0
     }
 
-    pub fn tick(&mut self, tickms: f64) {
+    pub fn tick(&mut self, tickms: f64, comunicacao: &mut Comunicacao) {
         println!("transito.tick");
         for carro in &mut self.carros_via_h {
-            carro.tick(tickms);
+            carro.tick(tickms, comunicacao);
         }
         for carro in &mut self.carros_via_v {
-            carro.tick(tickms);
+            carro.tick(tickms, comunicacao);
         }
 
         // Carro mais antigo na via H saiu do sistema?
